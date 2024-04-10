@@ -27,7 +27,7 @@ Parameters such as number of control points, learning rate etc can be changed in
 
 ### Fitting Bezier Curves to Arbitrary shapes 
 
-We show that we can optimize the locations of the control points of Bezier curves to fit to arbitrary parameteric shapes. Refer to `bezier_curvefit.py`. In the file, we have 3 Shapes - `HEART`, `ELLIPSE` and `ASTRID`. The image below shows fitting a heart shape. In the image below, the predicted curve is intentionally scaled so that the ground truth and the prediction are clearly visible. The fit is actually perfect, and makes it hard to see both the curves overlayed separately on the plot. 
+We show that we can optimize the locations of the control points of Bezier curves to fit to arbitrary parameteric shapes. Refer to `bezier_curvefit.py`. In the file, we have 3 Shapes - `HEART`, `ELLIPSE` and `ASTRID`. The image below shows fitting a heart shape, starting from a randomly initialized Bezier Curve. In the image below, the predicted curve is intentionally scaled so that the ground truth and the prediction are clearly visible. The fit is actually perfect, and makes it hard to see both the curves overlayed separately on the plot. 
 
 ![Initialization](assets/init.png)
 ![Heart Fit](assets/control_pts_descent.png)
@@ -35,6 +35,6 @@ We show that we can optimize the locations of the control points of Bezier curve
 You can run the file as 
 
 ```
-python3 sdf_descent.py 
+python3 bezier_curvefit.py 
 ```
 On running the file as is, the optimization loss curve, initial Bezier Curve, and the final fit will be saved in a sub-folder `heart_20` in the current directory. This can be modified from inside the code, along with the number of control points, learning rate etc.
