@@ -1,0 +1,56 @@
+name: Publish SlangTorch
+
+on:
+  push:
+    tags:
+    - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: 'true'
+        fetch-depth: '0'
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.7.16
+    - name: Download artifact - win64
+      id: download-win64
+      uses: dsaltares/fetch-gh-release-asset@master
+      with:
+        repo: shader-slang/slang
+        file: 'slang-.*-win64\.zip'
+        target: "./"
+        regex: true
+    - name: Download artifact - linux64
+      id: download-linux64
+      uses: dsaltares/fetch-gh-release-asset@master
+      with:
+        repo: shader-slang/slang
+        file: 'slang-.*-linux-x86_64\.zip'
+        target: "./"
+        regex: true
+    - name: Copy Slang binaries and Build Package
+      run: |
+        export TAGNAME=${{ steps.download-win64.outputs.version}}
+        export WIN64ZIP=slang-${TAGNAME:1}-win64.zip
+        export LINUX64ZIP=slang-${TAGNAME:1}-linux-x86_64.zip
+        source build-package.sh
+
+        for file in ./dist/*
+        do
+          echo "Built Package: $file"
+        done
+    - uses: actions/upload-artifact@v3
+      with:
+        name: slangtorch
+        path: |
+          ./dist/*
+
+    - name: Publish a Python distribution to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}

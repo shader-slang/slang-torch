@@ -1,0 +1,4 @@
+# ninja log v5
+9	1815	7212572868694439	autobind-multiply-struct_cuda.cuda.o	d2569f4de5cd62de
+6	10136	7212572951710880	autobind-multiply-struct.o	e1875b3dbfbf9b2b
+10154	10244	7212572952879638	_slangpy_autobind_multiply_struct_44136fa355b3678a.pyd	e8670f38f11a73d7

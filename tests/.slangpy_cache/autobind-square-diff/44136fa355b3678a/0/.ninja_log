@@ -1,0 +1,4 @@
+# ninja log v5
+8	1868	7212572712934180	autobind-square-diff_cuda.cuda.o	c92d54904f9eee05
+5	10282	7212572796875836	autobind-square-diff.o	f161d7115a99c48f
+10300	10387	7212572798032887	_slangpy_autobind_square_diff_44136fa355b3678a.pyd	b219c2d3b473fd89

@@ -1,0 +1,8 @@
+exclude build-package.sh
+exclude build.bat
+exclude dist/
+exclude tests/
+include slangtorch/bin/slang.dll
+include slangtorch/bin/libslang.so
+include slangtorch/bin/slangc
+include slangtorch/bin/slangc.exe

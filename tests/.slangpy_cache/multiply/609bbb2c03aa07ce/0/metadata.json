@@ -1,0 +1,46 @@
+{
+    "cpp": {
+        "options": [
+            "-DFACTOR=1.0"
+        ],
+        "deps": [
+            [
+                "D:\\git_repo\\slang-python\\tests\\multiply.slang",
+                1692632448.4225621
+            ],
+            [
+                "D:\\git_repo\\slang-python\\slangpy\\bin\\slangc.exe",
+                1699553991.5441267
+            ],
+            [
+                "D:\\git_repo\\slang-python\\slangpy\\bin\\slang.dll",
+                1699553989.13965
+            ]
+        ],
+        "version": "1.1.18",
+        "includePaths": []
+    },
+    "cuda": {
+        "options": [
+            "-DFACTOR=1.0"
+        ],
+        "deps": [
+            [
+                "D:\\git_repo\\slang-python\\tests\\multiply.slang",
+                1692632448.4225621
+            ],
+            [
+                "D:\\git_repo\\slang-python\\slangpy\\bin\\slangc.exe",
+                1699553991.5441267
+            ],
+            [
+                "D:\\git_repo\\slang-python\\slangpy\\bin\\slang.dll",
+                1699553989.13965
+            ]
+        ],
+        "version": "1.1.18",
+        "includePaths": []
+    },
+    "moduleName": "_slangpy_multiply_609bbb2c03aa07ce",
+    "moduleBinary": "D:\\git_repo\\slang-python\\tests\\.slangpy_cache\\multiply\\609bbb2c03aa07ce\\0\\_slangpy_multiply_609bbb2c03aa07ce.pyd"
+}

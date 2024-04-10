@@ -1,0 +1,1 @@
+Textures in this example come from https://ambientcg.com/ licensed under the Creative Commons CC0 1.0 Universal License.

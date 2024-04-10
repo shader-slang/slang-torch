@@ -1,0 +1,4 @@
+# ninja log v5
+9	2343	7212572568222257	autobind-square_cuda.cuda.o	bcc2984a2989d073
+5	11222	7212572656804912	autobind-square.o	3bfc1228e14fbf5
+11240	11508	7212572659777988	_slangpy_autobind_square_44136fa355b3678a.pyd	7e6cf0194e137aae

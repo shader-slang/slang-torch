@@ -1,0 +1,42 @@
+{
+    "cpp": {
+        "options": [],
+        "deps": [
+            [
+                "D:\\git_repo\\slang-python\\tests\\autobind-square-diff.slang",
+                1695969492.861447
+            ],
+            [
+                "D:\\git_repo\\slang-python\\slangpy\\bin\\slangc.exe",
+                1699553991.5441267
+            ],
+            [
+                "D:\\git_repo\\slang-python\\slangpy\\bin\\slang.dll",
+                1699553989.13965
+            ]
+        ],
+        "version": "1.1.18",
+        "includePaths": []
+    },
+    "cuda": {
+        "options": [],
+        "deps": [
+            [
+                "D:\\git_repo\\slang-python\\tests\\autobind-square-diff.slang",
+                1695969492.861447
+            ],
+            [
+                "D:\\git_repo\\slang-python\\slangpy\\bin\\slangc.exe",
+                1699553991.5441267
+            ],
+            [
+                "D:\\git_repo\\slang-python\\slangpy\\bin\\slang.dll",
+                1699553989.13965
+            ]
+        ],
+        "version": "1.1.18",
+        "includePaths": []
+    },
+    "moduleName": "_slangpy_autobind_square_diff_44136fa355b3678a",
+    "moduleBinary": "D:\\git_repo\\slang-python\\tests\\.slangpy_cache\\autobind-square-diff\\44136fa355b3678a\\0\\_slangpy_autobind_square_diff_44136fa355b3678a.pyd"
+}
