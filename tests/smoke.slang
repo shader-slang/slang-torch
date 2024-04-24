@@ -3,13 +3,13 @@
 // Verify that we can output a cuda device function with [CudaDeviceExport].
 // Disabled until we have FileCheck.
 
-struct ReturnValue
+public __extern_cpp struct ReturnValue
 {
     TorchTensor<float> v0;
     TorchTensor<float> v1;
 }
 
-struct Inputs
+public __extern_cpp struct Inputs
 {
     TorchTensor<float> input;
     float value;

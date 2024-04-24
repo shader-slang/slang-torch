@@ -1,8 +1,11 @@
 import unittest
 import os
-import torch
+import sys
+from contextlib import contextmanager
 
+import torch
 import slangtorch
+
 
 class TestSlangTorchSmoke(unittest.TestCase):
     def test_smoke(self):
@@ -92,7 +95,8 @@ class TestOptions(unittest.TestCase):
         slangModuleFile = os.path.join(test_dir, 'multiply.slang')
 
         with self.assertRaises(RuntimeError):
-            module = slangtorch.loadModule(slangModuleFile, defines={})
+            with suppressOutput():
+                module = slangtorch.loadModule(slangModuleFile, defines={})
 
 class TestHotReload(unittest.TestCase):
     def test_hot_reload(self):
@@ -192,7 +196,8 @@ class TestCacheState(unittest.TestCase):
 
         # Expect a RuntimeError (define is not set)
         with self.assertRaises(RuntimeError):
-            slangtorch.loadModule(slangModuleFile)
+            with suppressOutput():
+                slangtorch.loadModule(slangModuleFile)
         
         # Run again, should succeed assuming the cache is in proper state.
         module = slangtorch.loadModule(slangModuleFile, defines={'FACTOR': '2.0'})
@@ -248,6 +253,19 @@ class TestCudaPreludeCache(unittest.TestCase):
         expected2 = torch.tensor([1.0]).cpu()
         assert(torch.all(torch.eq(X.cpu(), expected2)))
 
+@contextmanager
+def suppressOutput():
+    # Suppress stdout and stderr for the duration of the context manager.
+    with open(os.devnull, 'w') as devnull:
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = devnull
+        sys.stderr = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
 
 class TestIncludePaths(unittest.TestCase):
     def test_include_paths(self):
@@ -294,8 +312,10 @@ class TestIncludePaths(unittest.TestCase):
                 f2.write(template)
 
         # Expect a RuntimeError (includePaths is not set)
+        # Suppress stderr output for this test.
         with self.assertRaises(RuntimeError):
-            slangtorch.loadModule(os.path.join(subdir1, 'import-module.slang'))
+            with suppressOutput():
+                slangtorch.loadModule(os.path.join(subdir1, 'import-module.slang'))
 
         # Run again, should succeed.
         module = slangtorch.loadModule(os.path.join(subdir1, 'import-module.slang'), includePaths=[subdir2])
