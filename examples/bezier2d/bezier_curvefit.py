@@ -1,12 +1,12 @@
 ## Fit Bezier Curve to Heart Shaped Equation
 import torch
-import slangpy
+import slangtorch
 import os 
 import matplotlib.pyplot as plt
 
-N = 20
+N = 12
 c = 2 
-m = slangpy.loadModule('bezier.slang', defines={"NUM_CTRL_PTS": N, "DIM":c})
+m = slangtorch.loadModule('bezier.slang', defines={"NUM_CTRL_PTS": N, "DIM":c}, verbose=True)
 
 
 def heart(t):
@@ -35,38 +35,38 @@ def curve_from_coeffs(t, coeffs):
     return output 
 
 class Bezier2D(torch.autograd.Function):
-	@staticmethod
-	def forward(ctx, t, control_pts):
-		"""
-		t: M,1 (torch.tensor) on GPU, parameter for bezier curves
-		control_pts: N,2 (torch.tensor) 
-		"""
-		outputs = torch.zeros(t.shape[0], control_pts.shape[1]).cuda()
-		kernel_with_args = m.bezier2D(t=t, control_pts=control_pts, output=outputs)
-		NUM_BLOCKS = 1 + t.shape[0] // 1024
-		kernel_with_args.launchRaw(
-			blockSize=(NUM_BLOCKS, 1, 1),
-			gridSize=(1024, 1, 1))
-		ctx.save_for_backward(t, control_pts, outputs)
-		return outputs
+    @staticmethod
+    def forward(ctx, t, control_pts):
+        """
+        t: M,1 (torch.tensor) on GPU, parameter for bezier curves
+        control_pts: N,2 (torch.tensor) 
+        """
+        outputs = torch.zeros(t.shape[0], control_pts.shape[1]).cuda()
+        kernel_with_args = m.bezier2D(t=t, control_pts=control_pts, output=outputs)
+        NUM_BLOCKS = 1 + t.shape[0] // 1024
+        kernel_with_args.launchRaw(
+            blockSize=(NUM_BLOCKS, 1, 1),
+            gridSize=(1024, 1, 1))
+        ctx.save_for_backward(t, control_pts, outputs)
+        return outputs
 
-	@staticmethod
-	def backward(ctx, grad_outputs):
-		(t, control_pts, outputs) = ctx.saved_tensors
-		grad_ctrl_pts = torch.zeros_like(control_pts).cuda()
-		grad_t  = torch.zeros_like(t).cuda()
-  		# Note: When using DiffTensorView, grad_output gets 'consumed' during the reverse-mode.
-		# If grad_output may be reused, consider calling grad_output = grad_output.clone()
+    @staticmethod
+    def backward(ctx, grad_outputs):
+        (t, control_pts, outputs) = ctx.saved_tensors
+        grad_ctrl_pts = torch.zeros_like(control_pts).cuda()
+        grad_t  = torch.zeros_like(t).cuda()
+          # Note: When using DiffTensorView, grad_output gets 'consumed' during the reverse-mode.
+        # If grad_output may be reused, consider calling grad_output = grad_output.clone()
 
-		kernel_with_args = m.bezier2D.bwd(t=(t, grad_t),
+        kernel_with_args = m.bezier2D.bwd(t=(t, grad_t),
                                                        control_pts=(control_pts, grad_ctrl_pts),
                                                        output=(outputs, grad_outputs))
-		NUM_BLOCKS = 1 + t.shape[0] // 1024
-		kernel_with_args.launchRaw(
-			blockSize=(NUM_BLOCKS, 1, 1),
-			gridSize=(1024, 1, 1))
+        NUM_BLOCKS = 1 + t.shape[0] // 1024
+        kernel_with_args.launchRaw(
+            blockSize=(NUM_BLOCKS, 1, 1),
+            gridSize=(1024, 1, 1))
 
-		return grad_t, grad_ctrl_pts
+        return grad_t, grad_ctrl_pts
 
 
 
@@ -75,7 +75,7 @@ class Bezier2D(torch.autograd.Function):
 num_pts = 100
 t = torch.linspace(0.0, 1, num_pts, dtype=torch.float).cuda()
 
-savedir =  "./heart_20"
+savedir =  "./heart_{}".format(N)
 os.makedirs(savedir, exist_ok=True)
 # gt_pts = ellipse(t, 3.0, 4.0)
 # gt_pts = astrid(t, 3.0)
@@ -102,13 +102,14 @@ loss_curve = []
 for epoch in range(10000):  # Assuming 10000 epochs
     pts = Bezier2D.apply(t,  opt_param)
     loss = ((torch.linalg.norm(pts  - gt_pts, dim=1))).mean()
+    loss_value = loss.item()
     optimizer.zero_grad()
     for pg in optimizer.param_groups:
         pg['lr'] = lr_init * 0.99
     loss.backward()
     optimizer.step()
     loss_curve.append(loss.item())
-    print(f"Epoch {epoch+1}, Loss: {loss.item()}")
+    print(f"Epoch {epoch+1}, Loss: {loss_value}")
 
 plt.figure()
 pts = Bezier2D.apply(t,  opt_param)

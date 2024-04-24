@@ -1,75 +1,75 @@
 import torch
-import slangpy
+import slangtorch
 import numpy as np
 import matplotlib.pyplot as plt 
 
 N = 6
 c = 2 
-m = slangpy.loadModule('bezier.slang', defines={"NUM_CTRL_PTS": N, "DIM":c})
+m = slangtorch.loadModule('bezier.slang', defines={"NUM_CTRL_PTS": N, "DIM":c})
 
 class BezierSDF_mats(torch.autograd.Function):
-	@staticmethod
-	def forward(ctx, xy, control_pts):
-		"""
-		xy: M,2 torch tensor on GPU, points at which SDF is to be evaluated 
-		control_pts: 
-		"""
-		# coeffs = torch.zeros_like(control_pts, dtype=torch.float).cuda()
-		# m.compute_coeffs(control_pts=control_pts, output=coeffs).launchRaw(blockSize=(1, 1, 1), gridSize=(1, 1, 1))
-		sdf_mats = torch.zeros(xy.shape[0], c*(N-1), c*(N-1)).cuda()
-		kernel_with_args = m.bezier2DSDF(xy=xy, control_pts=control_pts, output=sdf_mats)
-		NUM_BLOCKS = 1 + xy.shape[0] // 1024
-		kernel_with_args.launchRaw(
-			blockSize=(NUM_BLOCKS, 1, 1),
-			gridSize=(1024, 1, 1))
-		ctx.save_for_backward(xy, control_pts, sdf_mats)
-		return sdf_mats
+    @staticmethod
+    def forward(ctx, xy, control_pts):
+        """
+        xy: M,2 torch tensor on GPU, points at which SDF is to be evaluated 
+        control_pts: 
+        """
+        # coeffs = torch.zeros_like(control_pts, dtype=torch.float).cuda()
+        # m.compute_coeffs(control_pts=control_pts, output=coeffs).launchRaw(blockSize=(1, 1, 1), gridSize=(1, 1, 1))
+        sdf_mats = torch.zeros(xy.shape[0], c*(N-1), c*(N-1)).cuda()
+        kernel_with_args = m.bezier2DSDF(xy=xy, control_pts=control_pts, output=sdf_mats)
+        NUM_BLOCKS = 1 + xy.shape[0] // 1024
+        kernel_with_args.launchRaw(
+            blockSize=(NUM_BLOCKS, 1, 1),
+            gridSize=(1024, 1, 1))
+        ctx.save_for_backward(xy, control_pts, sdf_mats)
+        return sdf_mats
 
-	@staticmethod
-	def backward(ctx, grad_sdf_mats):
-		(xy, control_pts, sdf_mats) = ctx.saved_tensors
-		grad_ctrl_pts = torch.zeros_like(control_pts)
-		grad_xy  = torch.zeros_like(xy)
-  		# Note: When using DiffTensorView, grad_output gets 'consumed' during the reverse-mode.
-		# If grad_output may be reused, consider calling grad_output = grad_output.clone()
+    @staticmethod
+    def backward(ctx, grad_sdf_mats):
+        (xy, control_pts, sdf_mats) = ctx.saved_tensors
+        grad_ctrl_pts = torch.zeros_like(control_pts)
+        grad_xy  = torch.zeros_like(xy)
+          # Note: When using DiffTensorView, grad_output gets 'consumed' during the reverse-mode.
+        # If grad_output may be reused, consider calling grad_output = grad_output.clone()
 
-		kernel_with_args = m.bezier2DSDF.bwd(xy=(xy, grad_xy),
+        kernel_with_args = m.bezier2DSDF.bwd(xy=(xy, grad_xy),
                                                        control_pts=(control_pts, grad_ctrl_pts),
                                                        output=(sdf_mats, grad_sdf_mats))
-		NUM_BLOCKS = 1 + xy.shape[0] // 1024
-		kernel_with_args.launchRaw(
-			blockSize=(NUM_BLOCKS, 1, 1),
-			gridSize=(1024, 1, 1))
+        NUM_BLOCKS = 1 + xy.shape[0] // 1024
+        kernel_with_args.launchRaw(
+            blockSize=(NUM_BLOCKS, 1, 1),
+            gridSize=(1024, 1, 1))
 
-		return grad_xy, grad_ctrl_pts
+        return grad_xy, grad_ctrl_pts
 
 
 def compute_sdf(control_pts, num_pts, xrange=[0.0,1.0], yrange=[0.0,1.0]):
-	px = torch.linspace(xrange[0], xrange[1], num_pts)
-	py = torch.linspace(yrange[0], yrange[1], num_pts)
+    px = torch.linspace(xrange[0], xrange[1], num_pts)
+    py = torch.linspace(yrange[0], yrange[1], num_pts)
 
-	# Create the meshgrid
-	x, y = torch.meshgrid(px, py.flip(dims=[0]), indexing='ij')  # 'i
-	xy = torch.stack([x,y], dim=-1 ).view(-1,2).cuda()
-	xy.requires_grad_(True)
-	sdf_mats = BezierSDF_mats.apply(xy, control_pts)
-	sdf = torch.linalg.det(sdf_mats)
-	sdf = torch.sign(sdf) * torch.sqrt(torch.abs(sdf))
+    # Create the meshgrid
+    x, y = torch.meshgrid(px, py.flip(dims=[0]), indexing='ij')  # 'i
+    xy = torch.stack([x,y], dim=-1 ).view(-1,2).cuda()
+    xy.requires_grad_(True)
+    sdf_mats = BezierSDF_mats.apply(xy, control_pts)
+    sdf = torch.linalg.det(sdf_mats)
+    sdf = torch.sign(sdf) * torch.sqrt(torch.abs(sdf))
 
-	return sdf    
+    return sdf    
 
 def compute_sdf_pts(control_pts, xy):
-	""" Compute sdf for a pre-specified point / array of points
-	Args:
-		xy: (M,2)
-		control_pts: (N,2)
-	Returns:
-		sdf (M,1)
-	"""
-	sdf_mats = BezierSDF_mats.apply(xy, control_pts)
-	sdf = torch.linalg.det(sdf_mats)
-	sdf = torch.sign(sdf) * torch.sqrt(torch.abs(sdf))
-	return sdf       
+    """ Compute sdf for a pre-specified point / array of points
+    Args:
+        xy: (M,2)
+        control_pts: (N,2)
+    Returns:
+        sdf (M,1)
+    """
+    sdf_mats = BezierSDF_mats.apply(xy, control_pts)
+    sdf = torch.linalg.det(sdf_mats)
+    sdf = torch.sign(sdf) * torch.sqrt(torch.abs(sdf))
+    return sdf       
 
 
 def curve_from_coeffs(t, coeffs):
@@ -99,16 +99,17 @@ loc_traj = []
 for epoch in range(1000):  # Assuming 1000 epochs
     sdf = compute_sdf_pts(gt_control_pts, loc_param)
     loss = torch.abs(torch.mean(sdf))
-    
+    loss_value = loss.item()
+
     optimizer.zero_grad()
     for pg in optimizer.param_groups:
         pg['lr'] = lr_init * loss.item()
     
     loss.backward()
-	
+    
     optimizer.step()
     loc_traj.append(loc_param[0].detach().cpu().numpy())
-    print(f"Epoch {epoch+1}, Loss: {loss.item()}, Parameter: {[loc_param[0][0].item(), loc_param[0][1].item()]}")
+    print(f"Epoch {epoch+1}, Loss: {loss_value}, Parameter: {[loc_param[0][0].item(), loc_param[0][1].item()]}")
 
 
 
