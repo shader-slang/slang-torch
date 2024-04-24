@@ -128,8 +128,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-tests/.slangslangtorch_cache/
+tests/.slangtorch_cache/
 bin/
 
-# Ignore all slangslangtorch cache folders.
-**/.slangslangtorch_cache/**
+# Ignore all slangtorch cache folders.
+**/.slangtorch_cache/**
