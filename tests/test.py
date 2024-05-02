@@ -510,3 +510,22 @@ class TestBuiltinTypeInputs(unittest.TestCase):
         expected1 = torch.tensor([1., 2., 3., 4., 5., 6., 7., 8., 9.]).cpu()
 
         assert(torch.all(torch.eq(Y.cpu(), expected1)))
+
+class TestEmptyTensor(unittest.TestCase):
+    def setUp(self) -> None:
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        slangModuleSourceFile = os.path.join(test_dir, 'copy.slang')
+        
+        module = slangtorch.loadModule(slangModuleSourceFile)
+        self.module = module
+
+    def test_empty_tensor(self):
+        # Create empty torch tensor.
+        X = torch.tensor([]).cuda()
+        Y = torch.zeros_like(X).cuda()
+
+        # Call the module with empty tensor.
+        self.module.copy(input=X, output=Y).launchRaw(blockSize=(32, 32, 1), gridSize=(1, 1, 1))
+
+        # Should not crash.
+
