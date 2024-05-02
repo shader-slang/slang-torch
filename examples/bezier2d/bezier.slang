@@ -57,9 +57,10 @@ matrix<float, N, c> compute_coeffs_device(DiffTensorView control_pts) {
 // Function to assemble matrix to compute determinant of to compute SDF. 
 [CudaDeviceExport]
 [Differentiable]
-MatrixG<N1 * N1> asm_mat(matrix<float, N,c> coeffs) {
-    // Function to create the matrix whose determinant is to be evaluated to get the sdf
-    // coeffs: Tensor (N,c)
+ MatrixG<N1 * N1> asm_mat(matrix<float, N,c> coeffs) {
+    /** Function to create the matrix whose determinant is to be evaluated to get the sdf
+    @param coeffs: Tensor (N,c)
+    **/
     MatrixG<N1 * N1> mat;
 
     // Initializing
@@ -84,9 +85,9 @@ MatrixG<N1 * N1> asm_mat(matrix<float, N,c> coeffs) {
 [Differentiable]
 void bezier2D(DiffTensorView t, DiffTensorView control_pts, DiffTensorView output)
 {
-    // t (tensor Mx1) : indices between 0-1 to traverse across the Bezier curve
-    // control_pts (Nx2): N - Degree of Bezier Curve 2D
-    // Get the 'global' index of this thread.
+    /** @param t (tensor Mx1) : indices between 0-1 to traverse across the Bezier curve
+    **  @param control_pts (Nx2): N - Degree of Bezier Curve 2D
+    */
     uint3 tIdx = cudaThreadIdx() + cudaBlockIdx() * cudaBlockDim();
 
     // If the thread index is beyond the input size, exit early.
@@ -104,15 +105,20 @@ void bezier2D(DiffTensorView t, DiffTensorView control_pts, DiffTensorView outpu
 [AutoPyBindCUDA]
 [CUDAKernel]
 [Differentiable]
-void bezier2DSDF(DiffTensorView xy, DiffTensorView control_pts, DiffTensorView output) {
-    // xy - M,c
-    // coeffs - N,c
-    // output - M,N1,N1 - matrix for each point at which SDF is to be evaluated
-    // coeffs - ,c
-    // Each thread computes the SDF value for a given xy coordinate from the determinant function above. Maybe change it up to be just differentiable, and not AutoPyBindCUDA
+void bezier2DSDF(DiffTensorView xy, DiffTensorView bcoeffs, DiffTensorView output) {
+    /** @param xy  - M,c
+    **  @param bcoeffs - N,c
+    **  @return output - M, N1, N1  matrix for each point at which SDF is to be evaluated
+    ** Each thread computes the SDF value for a given xy coordinate from the determinant function above. Maybe change it up to be just differentiable, and not AutoPyBindCUDA
+    */
     uint3 tIdx = cudaThreadIdx() + cudaBlockIdx() * cudaBlockDim();
-    matrix<float, N, c> coeffs = compute_coeffs_device(control_pts);
-    
+    matrix<float, N, c> coeffs; // = compute_coeffs_device(control_pts);
+
+    // copying coefficients to a separate variable for each thread.
+    for (int i = 0; i < N; i++)
+        for (int j = 0; j < c; j++)
+            coeffs[i][j] = bcoeffs[i, j];
+
     int M = xy.size(0); // xy - shaped M,2
     if (tIdx.x > M) {
         return;
