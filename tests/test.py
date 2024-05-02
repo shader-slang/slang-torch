@@ -494,3 +494,19 @@ class TestBuiltinTypeInputs(unittest.TestCase):
         expected1 = torch.tensor([1., 2., 3., 4., 5., 6., 7., 8., 9.]).cpu()
 
         assert(torch.all(torch.eq(Y.cpu(), expected1)))
+
+    def test_builtin_types_in_struct(self):
+        Y = torch.tensor([0., 0., 0., 0., 0., 0., 0., 0., 0.]).cuda()
+
+        self.module.plain_copy_struct(input=self.module.MyStruct(m=((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0))), output=Y).launchRaw(blockSize=(32, 1, 1), gridSize=(1, 1, 1))
+        expected1 = torch.tensor([1., 2., 3., 4., 5., 6., 7., 8., 9.]).cpu()
+
+        assert(torch.all(torch.eq(Y.cpu(), expected1)))
+
+    def test_builtin_types_in_array(self):
+        Y = torch.tensor([0., 0., 0., 0., 0., 0., 0., 0., 0.]).cuda()
+
+        self.module.plain_copy_array(input=[(1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)], output=Y).launchRaw(blockSize=(32, 1, 1), gridSize=(1, 1, 1))
+        expected1 = torch.tensor([1., 2., 3., 4., 5., 6., 7., 8., 9.]).cpu()
+
+        assert(torch.all(torch.eq(Y.cpu(), expected1)))
