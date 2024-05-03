@@ -4,7 +4,7 @@ import slangtorch
 import os 
 import matplotlib.pyplot as plt
 
-N = 12
+N = 20
 c = 2 
 m = slangtorch.loadModule('bezier.slang', defines={"NUM_CTRL_PTS": N, "DIM":c}, verbose=True)
 
