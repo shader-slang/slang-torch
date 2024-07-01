@@ -290,7 +290,8 @@ def _compileSlang(metadata, fileName, targetMode, options, outputFile, includePa
                       '-target', targetMode,
                       '-line-directive-mode', 'none',
                       '-o', outputFile,
-                      '-depfile', depFile]
+                      '-depfile', depFile,
+                      '-ignore-capabilities']
 
     if includePaths is not None:
         for includePath in includePaths:

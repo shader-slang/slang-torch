@@ -510,3 +510,184 @@ class TestBuiltinTypeInputs(unittest.TestCase):
         expected1 = torch.tensor([1., 2., 3., 4., 5., 6., 7., 8., 9.]).cpu()
 
         assert(torch.all(torch.eq(Y.cpu(), expected1)))
+class TestAutogradFunction(unittest.TestCase):
+    def setUp(self) -> None:
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        square_module_filepath = os.path.join(test_dir, 'autobind-square-diff.slang')
+        m = slangtorch.loadModule(square_module_filepath)
+        class MySquareFunc(torch.autograd.Function):
+            @staticmethod
+            def forward(ctx, input):
+                output = torch.zeros_like(input)
+
+                kernel_with_args = m.square(input=input, output=output)
+                kernel_with_args.launchRaw(
+                    blockSize=(32, 1, 1),
+                    gridSize=((input.shape[0] + 31) // 32, 1, 1))
+
+                ctx.save_for_backward(input, output)
+
+                return output
+
+            @staticmethod
+            def backward(ctx, grad_output):
+                (input, output) = ctx.saved_tensors
+
+                input_grad = torch.zeros_like(input)
+                
+                # Often, the reverse mode derivative can use broadcasted tensors, which Slang does not 
+                # natively support. A simple workaround is to call .contiguous() on the grad_output tensor.
+                #
+                grad_output = grad_output.contiguous()
+                kernel_with_args = m.square.bwd(input=(input, input_grad), output=(output, grad_output))
+                kernel_with_args.launchRaw(
+                    blockSize=(32, 1, 1),
+                    gridSize=((input.shape[0] + 31) // 32, 1, 1))
+                
+                return input_grad
+        
+        self.square_func_class = MySquareFunc
+    
+    def test_square_func_example(self):
+        x = torch.tensor((3.0, 4.0), requires_grad=True, device='cuda')
+        y_pred = self.square_func_class.apply(x)
+        loss = y_pred.sum()
+        loss.backward()
+        
+        expected_grad = torch.tensor((6.0, 8.0)).cuda()
+        assert(torch.all(torch.eq(x.grad, expected_grad)))
+
+class TestBroadcastedTensorError(unittest.TestCase):
+    def test_broadcasted_tensor_input(self):
+        """
+            Slang should throw an error if the input tensor is broadcasted.
+        """
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        slangModuleSourceFile = os.path.join(test_dir, 'autobind-square-diff.slang')
+        
+        module = slangtorch.loadModule(slangModuleSourceFile)
+        X = torch.tensor([[1., 2., 3., 4.]]).cuda()
+        X_broadcasted = X.expand(3, 4)
+        Y = torch.zeros_like(X).cuda()
+
+        # Check that the input tensor is broadcasted (any stride is 0)
+        assert(any([stride == 0 for stride in X_broadcasted.stride()]))
+
+        # Check that slang raises an error
+        with self.assertRaises(RuntimeError):
+            module.square(input=X_broadcasted, output=Y).launchRaw(blockSize=(32, 1, 1), gridSize=(1, 1, 1))
+        
+        # Check that calling .contiguous() fixes the issue
+        module.square(input=X_broadcasted.contiguous(), output=Y).launchRaw(blockSize=(32, 1, 1), gridSize=(1, 1, 1))
+        
+
+class TestAutogradFunction(unittest.TestCase):
+    def setUp(self) -> None:
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        square_module_filepath = os.path.join(test_dir, 'autobind-square-diff.slang')
+        m = slangtorch.loadModule(square_module_filepath)
+        class MySquareFunc(torch.autograd.Function):
+            @staticmethod
+            def forward(ctx, input):
+                output = torch.zeros_like(input)
+
+                kernel_with_args = m.square(input=input, output=output)
+                kernel_with_args.launchRaw(
+                    blockSize=(32, 1, 1),
+                    gridSize=((input.shape[0] + 31) // 32, 1, 1))
+
+                ctx.save_for_backward(input, output)
+
+                return output
+
+            @staticmethod
+            def backward(ctx, grad_output):
+                (input, output) = ctx.saved_tensors
+
+                input_grad = torch.zeros_like(input)
+                
+                # Often, the reverse mode derivative can use broadcasted tensors, which Slang does not 
+                # natively support. A simple workaround is to call .contiguous() on the grad_output tensor.
+                #
+                grad_output = grad_output.contiguous()
+                kernel_with_args = m.square.bwd(input=(input, input_grad), output=(output, grad_output))
+                kernel_with_args.launchRaw(
+                    blockSize=(32, 1, 1),
+                    gridSize=((input.shape[0] + 31) // 32, 1, 1))
+                
+                return input_grad
+        
+        self.square_func_class = MySquareFunc
+    
+    def test_square_func_example(self):
+        x = torch.tensor((3.0, 4.0), requires_grad=True, device='cuda')
+        y_pred = self.square_func_class.apply(x)
+        loss = y_pred.sum()
+        loss.backward()
+        
+        expected_grad = torch.tensor((6.0, 8.0)).cuda()
+        assert(torch.all(torch.eq(x.grad, expected_grad)))
+
+class TestBroadcastedTensorError(unittest.TestCase):
+    def test_broadcasted_tensor_input(self):
+        """
+            Slang should throw an error if the input tensor is broadcasted.
+        """
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        slangModuleSourceFile = os.path.join(test_dir, 'autobind-square-diff.slang')
+        
+        module = slangtorch.loadModule(slangModuleSourceFile)
+        X = torch.tensor([[1., 2., 3., 4.]]).cuda()
+        X_broadcasted = X.expand(3, 4)
+        Y = torch.zeros_like(X).cuda()
+
+        # Check that the input tensor is broadcasted (any stride is 0)
+        assert(any([stride == 0 for stride in X_broadcasted.stride()]))
+
+        # Check that slang raises an error
+        with self.assertRaises(RuntimeError):
+            module.square(input=X_broadcasted, output=Y).launchRaw(blockSize=(32, 1, 1), gridSize=(1, 1, 1))
+        
+        # Check that calling .contiguous() fixes the issue
+        module.square(input=X_broadcasted.contiguous(), output=Y).launchRaw(blockSize=(32, 1, 1), gridSize=(1, 1, 1))
+        
+class TestBuiltinTypeInputs(unittest.TestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        slangModuleSourceFile = os.path.join(test_dir, 'builtin-type-input.slang')
+
+        module = slangtorch.loadModule(slangModuleSourceFile)
+        self.module = module
+
+    def test_plain_vector_input(self):
+        Y = torch.tensor([0., 0., 0.]).cuda()
+
+        self.module.plain_copy_float3(input=(1.0, 2.0, 3.0), output=Y).launchRaw(blockSize=(32, 1, 1), gridSize=(1, 1, 1))
+        expected1 = torch.tensor([1., 2., 3.]).cpu()
+
+        assert(torch.all(torch.eq(Y.cpu(), expected1)))
+    
+    def test_plain_matrix_input(self):
+        Y = torch.tensor([0., 0., 0., 0., 0., 0., 0., 0., 0.]).cuda()
+
+        self.module.plain_copy_float3x3(input=((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)), output=Y).launchRaw(blockSize=(32, 1, 1), gridSize=(1, 1, 1))
+        expected1 = torch.tensor([1., 2., 3., 4., 5., 6., 7., 8., 9.]).cpu()
+
+        assert(torch.all(torch.eq(Y.cpu(), expected1)))
+
+    def test_builtin_types_in_struct(self):
+        Y = torch.tensor([0., 0., 0., 0., 0., 0., 0., 0., 0.]).cuda()
+
+        self.module.plain_copy_struct(input=self.module.MyStruct(m=((1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0))), output=Y).launchRaw(blockSize=(32, 1, 1), gridSize=(1, 1, 1))
+        expected1 = torch.tensor([1., 2., 3., 4., 5., 6., 7., 8., 9.]).cpu()
+
+        assert(torch.all(torch.eq(Y.cpu(), expected1)))
+
+    def test_builtin_types_in_array(self):
+        Y = torch.tensor([0., 0., 0., 0., 0., 0., 0., 0., 0.]).cuda()
+
+        self.module.plain_copy_array(input=[(1.0, 2.0, 3.0), (4.0, 5.0, 6.0), (7.0, 8.0, 9.0)], output=Y).launchRaw(blockSize=(32, 1, 1), gridSize=(1, 1, 1))
+        expected1 = torch.tensor([1., 2., 3., 4., 5., 6., 7., 8., 9.]).cpu()
+
+        assert(torch.all(torch.eq(Y.cpu(), expected1)))
