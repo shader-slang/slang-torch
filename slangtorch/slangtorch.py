@@ -15,6 +15,12 @@ from .util import wrapModule
 packageDir = pkg_resources.resource_filename(__name__, '')
 versionCode = my_version = pkg_resources.get_distribution('slangtorch').version
 
+DEFAULT_CUDA_CFLAGS = ["-U__CUDA_NO_HALF_OPERATORS__",
+                       "-U__CUDA_NO_HALF_CONVERSIONS__",
+                       "-U__CUDA_NO_HALF2_OPERATORS__",
+                       "-U__CUDA_NO_BFLOAT16_CONVERSIONS__",
+                       "-DSLANG_CUDA_ENABLE_HALF=1",]
+
 if sys.platform == "win32":
     # Windows
     executable_extension = ".exe"
@@ -446,8 +452,8 @@ def _compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDi
     # make sure to add cl.exe to PATH on windows so ninja can find it.
     _add_msvc_to_env_var()
 
-    extra_cflags = None
-    extra_cuda_cflags = None
+    extra_cflags = []
+    extra_cuda_cflags = []
     # If windows, add /std:c++17 to extra_cflags
     if sys.platform == "win32":
         extra_cflags = ["/std:c++17"]
@@ -463,11 +469,13 @@ def _compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDi
     else:
         extra_include_paths = None
 
+    extra_cuda_cflags = extra_cuda_cflags + DEFAULT_CUDA_CFLAGS
+    
     return jit_compile(
         moduleName,
         sources,
         extra_cflags=extra_cflags,
-        extra_cuda_cflags=extra_cuda_cflags,
+        extra_cuda_cflags=extra_cuda_cflags if extra_cuda_cflags else None,
         extra_ldflags=None,
         extra_include_paths=extra_include_paths,
         build_directory=os.path.realpath(buildDir),

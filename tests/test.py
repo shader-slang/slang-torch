@@ -640,3 +640,20 @@ class TestEmptyTensor(unittest.TestCase):
 
         # Should not crash.
 
+class TestHalfDType(unittest.TestCase):
+    def setUp(self) -> None:
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        slangModuleSourceFile = os.path.join(test_dir, 'autobind-square-half.slang')
+        
+        module = slangtorch.loadModule(slangModuleSourceFile)
+        self.module = module
+
+    def test_half_multiply(self):
+        X = torch.tensor([1., 2., 3., 4.]).cuda().half()
+        Z = torch.zeros_like(X).cuda().half()
+
+        self.module.square(input=X, output=Z).launchRaw(blockSize=(32, 1, 1), gridSize=(1, 1, 1))
+
+        expected = torch.tensor([1., 4., 9., 16.]).cuda().half()
+
+        assert(torch.all(torch.eq(Z, expected)))
