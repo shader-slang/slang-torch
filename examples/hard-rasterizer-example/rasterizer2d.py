@@ -109,8 +109,6 @@ def set_grad(var):
         var.grad = grad
     return hook
 
-rasterizer2d_core = slangtorch.loadModule("hard-rasterizer2d.slang")
-
 # Run our training loop.
 def optimize(i):
     print("Iteration %d" % i)
