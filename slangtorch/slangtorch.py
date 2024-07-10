@@ -45,7 +45,13 @@ slangcPath = os.path.realpath(slangcPath)
 if not os.path.exists(slangcPath):
     raise RuntimeError(f"Could not find slangc executable at {slangcPath}")
 
+# Mapping from module key to latest version number. Used to create unique build directories.
 MODULE_VERSIONS = {}
+
+# Mapping from module key to set of loaded build directories. Used to avoid re-using build directories
+# whose binaries are in use (compilation will fail)
+#
+LOADED_BUILD_DIRS = {}
 
 def getUniqueSessionVersion(moduleKey):
     if moduleKey not in MODULE_VERSIONS:
@@ -55,6 +61,23 @@ def getUniqueSessionVersion(moduleKey):
     
     return MODULE_VERSIONS[moduleKey]
 
+def getCurrentSessionVersion(moduleKey):
+    if moduleKey not in MODULE_VERSIONS:
+        MODULE_VERSIONS[moduleKey] = 0
+    
+    return MODULE_VERSIONS[moduleKey]
+
+def addLoadedDirectoryEntry(moduleKey, version):
+    if moduleKey not in LOADED_BUILD_DIRS:
+        LOADED_BUILD_DIRS[moduleKey] = set()
+    
+    LOADED_BUILD_DIRS[moduleKey].add(version)
+
+def isDirectoryInUse(moduleKey, version):
+    if moduleKey not in LOADED_BUILD_DIRS:
+        return False
+    
+    return version in LOADED_BUILD_DIRS[moduleKey]
 
 def _replaceFileExt(fileName, newExt, suffix=None):
     baseName, old_extension = os.path.splitext(fileName)
@@ -166,6 +189,10 @@ def getOrCreateUniqueDir(moduleKey, baseDir):
         latestBuildID = None
 
     targetBuildID = getUniqueSessionVersion(moduleKey)
+
+    while (isDirectoryInUse(moduleKey, makeBuildDirPath(baseDir, targetBuildID))):
+        # If the build directory is in use, we need to create a new build directory.
+        targetBuildID = getUniqueSessionVersion(moduleKey)
     
     targetDir = None
     if (latestBuildID is None) or targetBuildID == latestBuildID:
@@ -623,6 +650,8 @@ def loadModule(fileName, skipSlang=None, verbose=False, defines={}, includePaths
             print(f"Working folder: {buildDir}", file=sys.stderr)
 
         rawModule = _loadModule(fileName, moduleName, buildDir, options, sourceDir=outputFolder, verbose=verbose, includePaths=includePaths, dryRun=False)
+        addLoadedDirectoryEntry(outputFolder, buildDir)
+
     return wrapModule(rawModule)
 
 
