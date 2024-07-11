@@ -1,14 +1,16 @@
 mkdir -p ./tmp
+mkdir -p ./tmp/win64
+mkdir -p ./tmp/linux64
 echo "extracting $WIN64ZIP"
-unzip -n $WIN64ZIP -d ./tmp
+unzip -n $WIN64ZIP -d ./tmp/win64
 echo "extracting $LINUX64ZIP"
-unzip -n $LINUX64ZIP -d ./tmp
+unzip -n $LINUX64ZIP -d ./tmp/linux64
 
 mkdir -p ./slangtorch/bin/
-cp ./tmp/bin/windows-x64/release/slang.dll ./slangtorch/bin/slang.dll
-cp ./tmp/bin/windows-x64/release/slangc.exe ./slangtorch/bin/slangc.exe
-cp ./tmp/bin/linux-x64/release/libslang.so ./slangtorch/bin/libslang.so
-cp ./tmp/bin/linux-x64/release/slangc ./slangtorch/bin/slangc
+cp ./tmp/win64/bin/slang.dll ./slangtorch/bin/slang.dll
+cp ./tmp/win64/bin/slangc.exe ./slangtorch/bin/slangc.exe
+cp ./tmp/linux64/lib/libslang.so ./slangtorch/bin/libslang.so
+cp ./tmp/linux64/bin/slangc ./slangtorch/bin/slangc
 chmod +x ./slangtorch/bin/slangc
 
 echo "content of ./slangtorch/bin/:"
