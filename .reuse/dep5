@@ -4,8 +4,7 @@ Upstream-Contact: The Khronos Group, Inc.
 Source: https://github.com/shader-slang/slang-torch
 
 Files: *
-Copyright: 2023 shader-slang
-           2024 The Khronos Group, Inc.
+Copyright: 2024 The Khronos Group, Inc.
 License: Apache-2.0 WITH LLVM-exception
 
 Files: tests/.slangpy_cache/smoke/44136fa355b3678a/smoke.cpp 
