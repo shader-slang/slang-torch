@@ -1,0 +1,21 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Slang Torch
+Upstream-Contact: The Khronos Group, Inc.
+Source: https://github.com/shader-slang/slang-torch
+
+Files: *
+Copyright: 2024 The Khronos Group, Inc.
+License: Apache-2.0 WITH LLVM-exception
+
+Files: tests/.slangpy_cache/smoke/44136fa355b3678a/smoke.cpp 
+       tests/.slangpy_cache/multiply/**/*.cpp 
+       tests/.slangpy_cache/multiply/**/*.cpp 
+       tests/.slangpy_cache/autobind-square/**/*.cpp 
+       tests/.slangpy_cache/autobind-square-diff/**/*.cpp 
+       tests/.slangpy_cache/autobind-multiply-struct/**/*.cpp 
+Copyright: 2022-2023 Martin Leitner-Ankerl <martin.ankerl@gmail.com>
+License: MIT
+
+Files: README.md CODE_OF_CONDUCT.md CONTRIBUTING.md
+Copyright: 2024 The Khronos Group, Inc.
+License: CC-BY-4.0
