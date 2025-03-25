@@ -15,10 +15,10 @@ jobs:
       with:
         submodules: 'true'
         fetch-depth: '0'
-    - name: Set up Python 3.7
+    - name: Set up Python 3.9
       uses: actions/setup-python@v2
       with:
-        python-version: 3.7.16
+        python-version: 3.9.19
     - name: Download artifact - win64
       id: download-win64
       uses: dsaltares/fetch-gh-release-asset@master
