@@ -46,7 +46,7 @@ jobs:
         do
           echo "Built Package: $file"
         done
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: slangtorch
         path: |
