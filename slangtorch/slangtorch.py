@@ -93,8 +93,14 @@ def find_cl():
     vswhere_path = os.environ.get('ProgramFiles(x86)', '') + '\\Microsoft Visual Studio\\Installer\\vswhere.exe'
 
     # Get the installation path of the latest version of Visual Studio
+    # for Community, Professional, Enterprise
     result = subprocess.run([vswhere_path, '-latest', '-products', '*', '-property', 'installationPath'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     vs_install_path = result.stdout.decode('utf-8').rstrip()
+
+    # for Preview
+    if not vs_install_path:
+        result = subprocess.run([vswhere_path, '-latest', '-products', '*', '-prerelease', '-property', 'installationPath'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        vs_install_path = result.stdout.decode('utf-8').rstrip()
 
     # Find the path to cl.exe
     cl_path = glob.glob(os.path.join(vs_install_path, "**", "VC", "Tools", "MSVC", "**", "bin", "HostX64", "X64"), recursive=True)
