@@ -503,6 +503,7 @@ def _compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDi
         extra_include_paths = None
 
     extra_cuda_cflags = extra_cuda_cflags + DEFAULT_CUDA_CFLAGS
+    extra_sycl_cflags = extraSyclFlags if extraSyclFlags else []
     
     return jit_compile(
         moduleName,

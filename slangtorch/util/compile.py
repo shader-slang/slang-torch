@@ -19,6 +19,8 @@ from torch.utils.cpp_extension import (
 
 from torch.utils.file_baton import FileBaton
 from torch.utils.hipify import hipify_python
+from torch.torch_version import TorchVersion
+from torch import __version__ as TORCH_VERSION
 
 from typing import Optional
 import sys
@@ -69,20 +71,35 @@ def jit_compile(name,
                         hipified_sources.add(hipify_result[s_abs]["hipified_path"] if s_abs in hipify_result else s_abs)
 
                     sources = list(hipified_sources)
-
-                _write_ninja_file_and_build_library(
-                    name=name,
-                    sources=sources,
-                    extra_cflags=extra_cflags or [],
-                    extra_cuda_cflags=extra_cuda_cflags or [],
-                    extra_sycl_cflags=extra_sycl_cflags or [],
-                    extra_ldflags=extra_ldflags or [],
-                    extra_include_paths=extra_include_paths or [],
-                    build_directory=build_directory,
-                    verbose=verbose,
-                    with_cuda=with_cuda,
-                    with_cuda=with_sycl,
-                    is_standalone=is_standalone)
+                
+                if TorchVersion(TORCH_VERSION) >= TorchVersion('2.7.0'):
+                    _write_ninja_file_and_build_library(
+                        name=name,
+                        sources=sources,
+                        extra_cflags=extra_cflags or [],
+                        extra_cuda_cflags=extra_cuda_cflags or [],
+                        extra_sycl_cflags=extra_sycl_cflags or [],
+                        extra_ldflags=extra_ldflags or [],
+                        extra_include_paths=extra_include_paths or [],
+                        build_directory=build_directory,
+                        verbose=verbose,
+                        with_cuda=with_cuda,
+                        with_sycl=with_sycl,
+                        is_standalone=is_standalone)
+                else:
+                    if (with_sycl is True) or (extra_sycl_cflags):
+                        print("Warning: SYCL support is not available in this version of PyTorch. SYCL flags will be ignored.")
+                    _write_ninja_file_and_build_library(
+                        name=name,
+                        sources=sources,
+                        extra_cflags=extra_cflags or [],
+                        extra_cuda_cflags=extra_cuda_cflags or [],
+                        extra_ldflags=extra_ldflags or [],
+                        extra_include_paths=extra_include_paths or [],
+                        build_directory=build_directory,
+                        verbose=verbose,
+                        with_cuda=with_cuda,
+                        is_standalone=is_standalone)
         finally:
             baton.release()
     else:
