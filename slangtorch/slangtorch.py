@@ -357,7 +357,7 @@ def _compileSlang(metadata, fileName, targetMode, options, outputFile, includePa
     return {"options": options, "deps": deps, "version": versionCode, "includePaths": includePaths}
 
 
-def compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDir=None, verbose=False, dryRun=False, skipNinjaCheck=False, extraCudaFlags=[]):
+def compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDir=None, verbose=False, dryRun=False, skipNinjaCheck=False, extraCudaFlags=[], extraSyclFlags=[]):
     needsRebuild = False
     needsReload = False
 
@@ -460,7 +460,7 @@ def compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDir
             return True, None
         
         # Compile the module.
-        slangLib = _compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDir, extraCudaFlags, verbose)
+        slangLib = _compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDir, extraCudaFlags, extraSyclFlags, verbose)
 
         newMetadata = metadata.copy()
         newMetadata["moduleName"] = moduleName
@@ -478,7 +478,7 @@ def compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDir
 compileAndLoadModule._moduleCache = {}
 
 
-def _compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDir, extraCudaFlags=[], verbose=False):
+def _compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDir, extraCudaFlags=[], extraSyclFlags=[], verbose=False):
     # make sure to add cl.exe to PATH on windows so ninja can find it.
     _add_msvc_to_env_var()
 
@@ -509,6 +509,7 @@ def _compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDi
         sources,
         extra_cflags=extra_cflags,
         extra_cuda_cflags=extra_cuda_cflags if extra_cuda_cflags else None,
+        extra_sycl_cflags=extra_sycl_cflags if extra_sycl_cflags else None,
         extra_ldflags=None,
         extra_include_paths=extra_include_paths,
         build_directory=os.path.realpath(buildDir),
@@ -516,7 +517,8 @@ def _compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDi
         is_python_module=True,
         is_standalone=False,
         keep_intermediates=True,
-        with_cuda=None)
+        with_cuda=None,
+        with_sycl=None)
 
 
 def parseDepfile(depFile):
