@@ -8,8 +8,10 @@ unzip -n $LINUX64ZIP -d ./tmp/linux64
 
 mkdir -p ./slangtorch/bin/
 cp ./tmp/win64/bin/slang.dll ./slangtorch/bin/slang.dll
+cp ./tmp/win64/bin/slang-glsl-module.dll ./slangtorch/bin/slang-glsl-module.dll
 cp ./tmp/win64/bin/slangc.exe ./slangtorch/bin/slangc.exe
 cp ./tmp/linux64/lib/libslang.so ./slangtorch/bin/libslang.so
+cp ./tmp/linux64/lib/libslang-glsl-module.so ./slangtorch/bin/libslang-glsl-module.so
 cp ./tmp/linux64/bin/slangc ./slangtorch/bin/slangc
 chmod +x ./slangtorch/bin/slangc
 
