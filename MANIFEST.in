@@ -3,6 +3,8 @@ exclude build.bat
 exclude dist/
 exclude tests/
 include slangtorch/bin/slang.dll
+include slangtorch/bin/slang-glsl-module.dll
 include slangtorch/bin/libslang.so
+include slangtorch/bin/libslang-glsl-module.so
 include slangtorch/bin/slangc
 include slangtorch/bin/slangc.exe
