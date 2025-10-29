@@ -125,22 +125,27 @@ def tryGetSlangDynamicLibraryPath():
     slangcDir = os.path.dirname(slangcPath)
     slangcDir = os.path.realpath(slangcDir)
 
-    if sys.platform == "win32":
-        # Windows
-        slangLibPath = os.path.join(slangcDir, "slang.dll")
-    elif sys.platform == "darwin":
-        # macOS
-        slangLibPath = os.path.join(slangcDir, "libslang.dylib")
-    elif (sys.platform == "" or sys.platform == "linux"):
-        # Linux
-        slangLibPath = os.path.join(slangcDir, "libslang.so")
-    else:
-        return None
+    # There are two possible library base names. In the case of slang-compiler, this
+    # relies on a symlink existing from libslang-compiler to the versioned name.
+    for slangLibBase in ["slang-compiler", "slang"]:
 
-    if os.path.exists(slangLibPath):
-        return slangLibPath
-    else:
-        return None
+        if sys.platform == "win32":
+            # Windows
+            slangLibPath = os.path.join(slangcDir, f"{slangLibBase}.dll")
+        elif sys.platform == "darwin":
+            # macOS
+            slangLibPath = os.path.join(slangcDir, f"lib{slangLibBase}.dylib")
+        elif (sys.platform == "" or sys.platform == "linux"):
+            # Linux
+            slangLibPath = os.path.join(slangcDir, f"lib{slangLibBase}.so")
+        else:
+            return None
+
+        if os.path.exists(slangLibPath):
+            return slangLibPath
+
+    # If neither base name is valid, library not found.
+    return None
 
 
 def getHash(obj, truncate_at=16):
