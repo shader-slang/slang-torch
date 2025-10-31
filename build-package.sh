@@ -11,7 +11,7 @@ cp ./tmp/win64/bin/slang.dll ./slangtorch/bin/
 cp ./tmp/win64/bin/slang-glsl-module.dll ./slangtorch/bin/
 cp ./tmp/win64/bin/slangc.exe ./slangtorch/bin/
 if [ -e "./tmp/linux64/lib/libslang-compiler.so" ]; then
-    cp ./tmp/linux64/lib/libslang-compiler*.so ./slangtorch/bin/
+    cp ./tmp/linux64/lib/libslang-compiler.so* ./slangtorch/bin/
 else
     cp ./tmp/linux64/lib/libslang.so ./slangtorch/bin/
 fi
