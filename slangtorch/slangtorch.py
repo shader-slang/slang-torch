@@ -147,7 +147,7 @@ def _getSlangLibNameFromSlangcVersionCheck():
             version = slangcErr.split('-')[0]
             if version >= "2025.21":
                 slangLibBase = "slang-compiler"
-                slangVersion = ".0.{version}"
+                slangVersion = f".0.{version}"
             else:
                 slangLibBase = "slang"
                 slangVersion = ""
