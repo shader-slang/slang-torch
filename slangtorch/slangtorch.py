@@ -32,11 +32,13 @@ else:
     # Linux and other Unix-like systems
     executable_extension = ""
 
+_slangcPathOverride = False
 slangcPath = os.path.join(
     packageDir, 'bin', 'slangc'+executable_extension)
 
 # If we have SLANGC_PATH set, use that instead
 if 'SLANGC_PATH' in os.environ:
+    _slangcPathOverride = True
     slangcPath = os.environ['SLANGC_PATH']
 
 # Ensure that slangcPath is a proper path
@@ -120,31 +122,132 @@ def _add_msvc_to_env_var():
             os.environ["PATH"] += os.pathsep + path_to_add
 
 
+# Helper functions for tryGetSlangDynamicLibraryPath
+def _tryLddSlangLibPath():
+    # Returns a tuple, (lddSuccess, ResolvedPath)
+    cmd = ['ldd', slangcPath]
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode != 0:
+        return False, None
+
+    # Search for resolved "libslang" in output.
+    lddOut = result.stdout.decode('utf-8')
+    mo = re.search(r'(?<=\s)\S*libslang\S*(?=\s)(?! +=>)', lddOut)
+    if mo:
+        return True, os.path.realpath(mo.group(0))
+    else:
+        return True, None
+
+def _getSlangLibNameFromSlangcVersionCheck():
+    cmd = [slangcPath, '-v']
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode == 0:
+        slangcErr = result.stderr.decode('utf-8')
+        if len(slangcErr) > 0:
+            version = slangcErr.split('-')[0]
+            if version >= "2025.21":
+                slangLibBase = "slang-compiler"
+                slangVersion = ".0.{version}"
+            else:
+                slangLibBase = "slang"
+                slangVersion = ""
+
+            if sys.platform == "win32":
+                # Windows
+                slangLibName = f"{slangLibBase}.dll"
+            elif sys.platform == "darwin":
+                # macOS
+                slangLibName = f"lib{slangLibBase}{slangVersion}.dylib"
+            elif (sys.platform == "" or sys.platform == "linux"):
+                # Linux
+                slangLibName = f"lib{slangLibBase}.so{slangVersion}"
+            else:
+                # unsupported platform
+                return None
+            return slangLibName
+    # Something went wrong
+    return None
+
+def _checkPathListForLibrary(pathList, libName):
+    for path in pathList:
+        path = os.path.expandvars(path)
+        path = os.path.expanduser(path)
+        filename = os.path.join(path, libName)
+        if os.path.exists(filename):
+            return os.path.realpath(filename)
+    return None
+
 def tryGetSlangDynamicLibraryPath():
     # Search in the slangcPath directory for the slang dynamic library.
     slangcDir = os.path.dirname(slangcPath)
     slangcDir = os.path.realpath(slangcDir)
 
-    # There are two possible library base names. In the case of slang-compiler, this
-    # relies on a symlink existing from libslang-compiler to the versioned name.
-    for slangLibBase in ["slang-compiler", "slang"]:
+    if sys.platform == "win32":
+        # Windows has 12 steps to resolving a dynamic library path; for brevity
+        # (and sanity), we only check the most likely locations.
 
-        if sys.platform == "win32":
-            # Windows
-            slangLibPath = os.path.join(slangcDir, f"{slangLibBase}.dll")
-        elif sys.platform == "darwin":
-            # macOS
-            slangLibPath = os.path.join(slangcDir, f"lib{slangLibBase}.dylib")
-        elif (sys.platform == "" or sys.platform == "linux"):
-            # Linux
-            slangLibPath = os.path.join(slangcDir, f"lib{slangLibBase}.so")
+        # Check slangc directory.
+        if not _slangcPathOverride:
+            # Optimization: Unlikely someone overwrite files in package location
+            # so see if we can get away with not running "slang -v"
+            slangLibName = None
+            slangLibList = ["slang-compiler.dll", "slang.dll"]
         else:
+            slangLibName = _getSlangLibNameFromSlangcVersionCheck()
+            if not slangLibName:
+                return None
+            slangLibList = [slangLibName]
+
+        for slangLibIter in slangLibList:
+            slangLibPath = os.path.join(slangcDir, slangLibIter)
+            if os.path.exists(slangLibPath):
+                return slangLibPath
+
+        # Definitely use "slangc -v" now
+        if not slangLibName:
+            slangLibName = _getSlangLibNameFromSlangcVersionCheck()
+            if not slangLibName:
+                return None
+
+        pathList = []
+        pathList.append(".")
+        pathList.extend(os.getenv("PATH", "").split(os.pathsep))
+        return _checkPathListForLibrary(pathList, slangLibName)
+
+    elif (sys.platform == "" or sys.platform == "linux"):
+        # try ldd first, if available, since it's fast
+        useLddResult, slangLibName = _tryLddSlangLibPath()
+        if useLddResult:
+            return slangLibName
+        # fall back to "slangc -v" for filename
+        slangLibName = _getSlangLibNameFromSlangcVersionCheck()
+        if not slangLibName:
             return None
 
-        if os.path.exists(slangLibPath):
-            return slangLibPath
+        pathList = []
+        # LD_LIBRARY_PATH
+        pathList.extend(os.getenv("LD_LIBRARY_PATH", "").split(os.pathsep))
+        # slangc DT_RUNPATH
+        pathList.append(os.path.join(slangcDir, "..", "lib"))
+        pathList.append(slangcDir)
+        return _checkPathListForLibrary(pathList, slangLibName)
 
-    # If neither base name is valid, library not found.
+    elif sys.platform == "darwin":
+        # NOTE: DYLD_PRINT_LIBRARIES looks promising, but can't use with signed libraries
+        slangLibName = _getSlangLibNameFromSlangcVersionCheck()
+        if not slangLibName:
+            return None
+
+        pathList = []
+        # slangc @rpath values
+        pathList.append(os.path.join(slangcDir, "..", "lib"))
+        pathList.append(slangcDir)
+        # DYLD_LIBRARY_PATH, DYLD_FALLBACK_LIBRARY_PATH
+        pathList.extend(os.getenv("DYLD_LIBRARY_PATH", "").split(os.pathsep))
+        pathList.extend(os.getenv("DYLD_FALLBACK_LIBRARY_PATH", "").split(os.pathsep))
+        return _checkPathListForLibrary(pathList, slangLibName)
+
+    # Library not found
     return None
 
 
