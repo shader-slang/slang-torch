@@ -7,7 +7,11 @@ echo "extracting $LINUX64ZIP"
 unzip -n $LINUX64ZIP -d ./tmp/linux64
 
 mkdir -p ./slangtorch/bin/
-cp ./tmp/win64/bin/slang.dll ./slangtorch/bin/
+if [ -e "./tmp/win64/bin/slang-compiler.dll" ]; then
+    cp ./tmp/win64/bin/slang-compiler.dll ./slangtorch/bin/
+else
+    cp ./tmp/win64/bin/slang.dll ./slangtorch/bin/
+fi
 cp ./tmp/win64/bin/slang-glsl-module.dll ./slangtorch/bin/
 cp ./tmp/win64/bin/slangc.exe ./slangtorch/bin/
 if [ -e "./tmp/linux64/lib/libslang-compiler.so" ]; then
