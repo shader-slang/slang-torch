@@ -30,9 +30,29 @@ rm $WIN64ZIP
 rm $LINUX64ZIP
 rm -rf ./tmp/
 
-python3 --version
+# Detect Python command - check if python has pip module
+PYTHON_CMD=""
+for cmd in python3 python py; do
+    if command -v $cmd &> /dev/null; then
+        if $cmd -m pip --version &> /dev/null; then
+            PYTHON_CMD=$cmd
+            echo "Found Python with pip: $cmd"
+            break
+        else
+            echo "Warning: $cmd found but no pip module available"
+        fi
+    fi
+done
 
-python -m pip install --upgrade pip
-pip install build hatchling
+if [ -z "$PYTHON_CMD" ]; then
+    echo "Error: Python with pip not found. Please install Python with pip or add it to PATH."
+    exit 1
+fi
 
-python -m build
+echo "Using Python command: $PYTHON_CMD"
+$PYTHON_CMD --version
+
+$PYTHON_CMD -m pip install --upgrade pip
+$PYTHON_CMD -m pip install build hatchling
+
+$PYTHON_CMD -m build
