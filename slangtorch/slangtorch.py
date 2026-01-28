@@ -1,19 +1,19 @@
 import os
 import sys
-import pkg_resources
 import subprocess
 import glob
 import hashlib
 import json
 import re
 import time
+from importlib.metadata import version
 from filelock import FileLock
 
 from .util import jit_compile, run_ninja, NinjaResult
 from .util import wrapModule
 
-packageDir = pkg_resources.resource_filename(__name__, '')
-versionCode = my_version = pkg_resources.get_distribution('slangtorch').version
+packageDir = os.path.dirname(__file__)
+versionCode = version('slangtorch')
 
 DEFAULT_CUDA_CFLAGS = ["-U__CUDA_NO_HALF_OPERATORS__",
                        "-U__CUDA_NO_HALF_CONVERSIONS__",
@@ -89,6 +89,12 @@ def _replaceFileExt(fileName, newExt, suffix=None):
         new_filename = baseName + newExt
     return new_filename
 
+def doesPlatformAllowReload():
+    if sys.platform == "win32":
+        return True
+    else:
+        # Assume linux/unix
+        return False
 
 def find_cl():
     # Look for cl.exe in the default installation path for Visual Studio
@@ -121,6 +127,13 @@ def _add_msvc_to_env_var():
         if path_to_add not in os.environ["PATH"].split(os.pathsep):
             os.environ["PATH"] += os.pathsep + path_to_add
 
+def getPyModuleExtension():
+    if sys.platform == "win32":
+        return "pyd"
+    elif sys.platform == "darwin":
+        return "so"
+    else:
+        return "so"
 
 # Helper functions for tryGetSlangDynamicLibraryPath
 def _tryLddSlangLibPath():
@@ -286,9 +299,9 @@ def getLatestDir(moduleKey, baseDir):
         with open(latestFile, 'r') as f:
             latestBuildID = int(f.read())
     else:
-        return None
+        return (None, 0)
     
-    return makeBuildDirPath(baseDir, latestBuildID)
+    return (makeBuildDirPath(baseDir, latestBuildID), latestBuildID)
 
 
 def getOrCreateUniqueDir(moduleKey, baseDir):
@@ -340,7 +353,7 @@ def getOrCreateUniqueDir(moduleKey, baseDir):
         if (os.path.exists(metadataFile) and os.path.isfile(metadataFile)):
             with open(metadataFile, 'r') as f:
                 metadata = json.load(f)
-                metadata['moduleBinary'] = os.path.join(targetDir, f"{metadata['moduleName']}.pyd")
+                metadata['moduleBinary'] = os.path.join(targetDir, f"{metadata['moduleName'][:-len(f'{latestBuildID}')]}{targetBuildID}.{getPyModuleExtension()}")
 
             with open(metadataFile, 'w') as f:
                 json.dump(metadata, f, indent=4)
@@ -349,7 +362,7 @@ def getOrCreateUniqueDir(moduleKey, baseDir):
     with open(latestFile, 'w') as f:
         f.write(str(targetBuildID))
     
-    return targetDir
+    return targetDir, targetBuildID
 
 
 def compileSlang(metadata, fileName, targetMode, options, outputFile, verbose=False, includePaths=[], dryRun=False, extraSlangFlags=[]):
@@ -480,6 +493,8 @@ def compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDir
     # Check if any of the sources are newer than the module binary.
     if metadata and metadata.get("moduleBinary", None):
         moduleBinary = os.path.realpath(metadata["moduleBinary"])
+        if verbose:
+            print ("Checking module binary at: ", moduleBinary, file=sys.stderr)
         if os.path.exists(moduleBinary):
             for source in sources:
                 if verbose:
@@ -494,6 +509,8 @@ def compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDir
                     needsRebuild = True
                     break
         else:
+            if verbose:
+                print("Module binary does not exist. Rebuilding.", file=sys.stderr)
             needsRebuild = True
     else:
         needsRebuild = True
@@ -530,8 +547,14 @@ def compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDir
         else:
             raise RuntimeError(f"Unknown ninja result: {ninja_result}")
     else:
-        if verbose:
+        if not needsRebuild and skipNinjaCheck and verbose:
             print(f"Skipping additional ninja check (WARNING: this may ignore changes to non-slang files)", file=sys.stderr)
+
+    # If our platform doesn't allow reloading the same binary (e.g. most linux flavors),
+    # then we'll fall back to rebuild.
+    #
+    if needsReload and not doesPlatformAllowReload():
+        needsRebuild = True
 
     cacheLookupKey = moduleName
     if not needsRebuild:
@@ -578,7 +601,7 @@ def compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDir
 
         newMetadata = metadata.copy()
         newMetadata["moduleName"] = moduleName
-        newMetadata["moduleBinary"] = os.path.join(buildDir, f"{moduleName}.pyd")
+        newMetadata["moduleBinary"] = os.path.join(buildDir, f"{moduleName}.{getPyModuleExtension()}")
     
     if dryRun:
         return False, None
@@ -754,9 +777,11 @@ def loadModule(fileName, skipSlang=None, verbose=False, defines={}, includePaths
         extraSlangFlags.append("-line-directive-mode")
         extraSlangFlags.append("none")
 
-    optionsHash = getHash([defines, extraCudaFlags, extraSlangFlags], truncate_at=16)
-    
     parentFolder = os.path.dirname(fileName)
+
+    # We'll include the parent folder in the hash to distinguish between files with the same name in different folders.
+    optionsHash = getHash([defines, extraCudaFlags, extraSlangFlags, parentFolder], truncate_at=16)
+    
     baseNameWoExt = os.path.splitext(os.path.basename(fileName))[0]
     baseOutputFolder = os.path.join(parentFolder, ".slangtorch_cache", baseNameWoExt)
     outputFolder = os.path.join(baseOutputFolder, optionsHash)
@@ -775,13 +800,13 @@ def loadModule(fileName, skipSlang=None, verbose=False, defines={}, includePaths
         moduleName = f"_slangtorch_{convertNonAlphaNumericToUnderscore(baseNameWoExt)}_{optionsHash}"
         
         # Dry run with latest build dir
-        buildDir = getLatestDir(outputFolder, outputFolder)
+        buildDir, buildID = getLatestDir(outputFolder, outputFolder)
 
         if buildDir is not None:
             if verbose:
                 print(f"Dry-run using latest build directory: {buildDir}", file=sys.stderr)
 
-            needsRecompile = _loadModule(fileName, moduleName, buildDir, options, sourceDir=outputFolder, verbose=verbose, includePaths=includePaths, dryRun=True, skipNinjaCheck=skipNinjaCheck, extraCudaFlags=extraCudaFlags, extraSlangFlags=extraSlangFlags)
+            needsRecompile = _loadModule(fileName, f"{moduleName}_{buildID}", buildDir, options, sourceDir=outputFolder, verbose=verbose, includePaths=includePaths, dryRun=True, skipNinjaCheck=skipNinjaCheck, extraCudaFlags=extraCudaFlags, extraSlangFlags=extraSlangFlags)
         else:
             if verbose:
                 print(f"No latest build directory.", file=sys.stderr)
@@ -792,14 +817,14 @@ def loadModule(fileName, skipSlang=None, verbose=False, defines={}, includePaths
             if verbose:
                 print("Build required. Creating unique build directory", file=sys.stderr)
             # Handle versioning
-            buildDir = getOrCreateUniqueDir(outputFolder, outputFolder)
+            buildDir, buildID = getOrCreateUniqueDir(outputFolder, outputFolder)
         else:
             buildDir = buildDir
         
         if verbose:
             print(f"Working folder: {buildDir}", file=sys.stderr)
 
-        rawModule = _loadModule(fileName, moduleName, buildDir, options, sourceDir=outputFolder, verbose=verbose, includePaths=includePaths, dryRun=False, skipNinjaCheck=skipNinjaCheck, extraCudaFlags=extraCudaFlags, extraSlangFlags=extraSlangFlags)
+        rawModule = _loadModule(fileName, f"{moduleName}_{buildID}", buildDir, options, sourceDir=outputFolder, verbose=verbose, includePaths=includePaths, dryRun=False, skipNinjaCheck=skipNinjaCheck, extraCudaFlags=extraCudaFlags, extraSlangFlags=extraSlangFlags)
         addLoadedDirectoryEntry(outputFolder, buildDir)
 
     return wrapModule(rawModule)

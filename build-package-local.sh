@@ -25,6 +25,36 @@ export WIN64ZIP="slang-${VERSION}-windows-x86_64.zip"
 echo "LINUX64ZIP: $LINUX64ZIP"
 echo "WIN64ZIP: $WIN64ZIP"
 
-# Run the build script
-echo "Running build-package.sh..."
-bash build-package.sh
+mkdir -p ./tmp
+mkdir -p ./tmp/win64
+mkdir -p ./tmp/linux64
+echo "extracting $WIN64ZIP"
+unzip -n $WIN64ZIP -d ./tmp/win64
+echo "extracting $LINUX64ZIP"
+unzip -n $LINUX64ZIP -d ./tmp/linux64
+
+mkdir -p ./slangtorch/bin/
+if [ -e "./tmp/win64/bin/slang-compiler.dll" ]; then
+    cp ./tmp/win64/bin/slang-compiler.dll ./slangtorch/bin/
+else
+    cp ./tmp/win64/bin/slang.dll ./slangtorch/bin/
+fi
+cp ./tmp/win64/bin/slang-glsl-module.dll ./slangtorch/bin/
+cp ./tmp/win64/bin/slangc.exe ./slangtorch/bin/
+if [ -e "./tmp/linux64/lib/libslang-compiler.so" ]; then
+    cp `realpath ./tmp/linux64/lib/libslang-compiler.so` ./slangtorch/bin/
+else
+    cp ./tmp/linux64/lib/libslang.so ./slangtorch/bin/
+fi
+cp ./tmp/linux64/lib/libslang-glsl-module*.so ./slangtorch/bin/
+cp ./tmp/linux64/bin/slangc ./slangtorch/bin/slangc
+chmod +x ./slangtorch/bin/slangc
+
+echo "content of ./slangtorch/bin/:"
+ls ./slangtorch/bin/
+
+rm $WIN64ZIP
+rm $LINUX64ZIP
+rm -rf ./tmp/
+
+python -m build
