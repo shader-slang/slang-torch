@@ -353,7 +353,16 @@ def getOrCreateUniqueDir(moduleKey, baseDir):
         if (os.path.exists(metadataFile) and os.path.isfile(metadataFile)):
             with open(metadataFile, 'r') as f:
                 metadata = json.load(f)
-                metadata['moduleBinary'] = os.path.join(targetDir, f"{metadata['moduleName'][:-len(f'{latestBuildID}')]}{targetBuildID}.{getPyModuleExtension()}")
+                # Safely derive the base module name: only strip the previous
+                # build ID suffix if it is actually present.
+                base_module_name = metadata.get('moduleName', '')
+                latest_id_str = str(latestBuildID)
+                if base_module_name.endswith(latest_id_str):
+                    base_module_name = base_module_name[:-len(latest_id_str)]
+                metadata['moduleBinary'] = os.path.join(
+                    targetDir,
+                    f"{base_module_name}{targetBuildID}.{getPyModuleExtension()}"
+                )
 
             with open(metadataFile, 'w') as f:
                 json.dump(metadata, f, indent=4)
