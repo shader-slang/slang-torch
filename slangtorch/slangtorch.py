@@ -130,8 +130,6 @@ def _add_msvc_to_env_var():
 def getPyModuleExtension():
     if sys.platform == "win32":
         return "pyd"
-    elif sys.platform == "darwin":
-        return "so"
     else:
         return "so"
 
