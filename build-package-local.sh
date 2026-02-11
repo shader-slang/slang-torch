@@ -35,19 +35,19 @@ unzip -n $LINUX64ZIP -d ./tmp/linux64
 
 mkdir -p ./slangtorch/bin/
 if [ -e "./tmp/win64/bin/slang-compiler.dll" ]; then
-    cp ./tmp/win64/bin/slang-compiler.dll ./slangtorch/bin/
+    mv ./tmp/win64/bin/slang-compiler.dll ./slangtorch/bin/
 else
-    cp ./tmp/win64/bin/slang.dll ./slangtorch/bin/
+    mv ./tmp/win64/bin/slang.dll ./slangtorch/bin/
 fi
-cp ./tmp/win64/bin/slang-glsl-module.dll ./slangtorch/bin/
-cp ./tmp/win64/bin/slangc.exe ./slangtorch/bin/
+mv ./tmp/win64/bin/slang-glsl-module.dll ./slangtorch/bin/
+mv ./tmp/win64/bin/slangc.exe ./slangtorch/bin/
 if [ -e "./tmp/linux64/lib/libslang-compiler.so" ]; then
-    cp `realpath ./tmp/linux64/lib/libslang-compiler.so` ./slangtorch/bin/
+    mv `realpath ./tmp/linux64/lib/libslang-compiler.so` ./slangtorch/bin/
 else
-    cp ./tmp/linux64/lib/libslang.so ./slangtorch/bin/
+    mv ./tmp/linux64/lib/libslang.so ./slangtorch/bin/
 fi
-cp ./tmp/linux64/lib/libslang-glsl-module*.so ./slangtorch/bin/
-cp ./tmp/linux64/bin/slangc ./slangtorch/bin/slangc
+mv ./tmp/linux64/lib/libslang-glsl-module*.so ./slangtorch/bin/
+mv ./tmp/linux64/bin/slangc ./slangtorch/bin/slangc
 chmod +x ./slangtorch/bin/slangc
 
 echo "content of ./slangtorch/bin/:"
