@@ -132,12 +132,13 @@ def run_ninja(
     env = os.environ.copy()
     # Try to activate the vc env for the users
     if IS_WINDOWS and 'VSCMD_ARG_TGT_ARCH' not in env:
-        from setuptools import distutils
+        import sysconfig
+        from setuptools.msvc import EnvironmentInfo
 
-        plat_name = distutils.util.get_platform()
+        plat_name = sysconfig.get_platform()
         plat_spec = PLAT_TO_VCVARS[plat_name]
 
-        vc_env = distutils._msvccompiler._get_vc_env(plat_spec)
+        vc_env = EnvironmentInfo(plat_spec).return_env()
         vc_env = {k.upper(): v for k, v in vc_env.items()}
         for k, v in env.items():
             uk = k.upper()
