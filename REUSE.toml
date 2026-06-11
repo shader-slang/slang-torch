@@ -1,0 +1,24 @@
+version = 1
+
+SPDX-PackageName = "Slang Torch"
+SPDX-PackageSupplier = "The Khronos Group, Inc."
+SPDX-PackageDownloadLocation = "https://github.com/shader-slang/slang-torch"
+
+[[annotations]]
+path = "**"
+presedence = "closest"
+SPDX-FileCopyrightText = "2024-2026 The Khronos Group, Inc."
+SPDX-License-Identifier = "Apache-2.0 WITH LLVM-exception"
+
+[[annotations]]
+presedence = "closest"
+path = [
+    "tests/.slangpy_cache/smoke/44136fa355b3678a/smoke.cpp",
+    "tests/.slangpy_cache/multiply/**/**.cpp",
+    "tests/.slangpy_cache/multiply/**/**.cpp",
+    "tests/.slangpy_cache/autobind-square/**/**.cpp",
+    "tests/.slangpy_cache/autobind-square-diff/**/**.cpp",
+    "tests/.slangpy_cache/autobind-multiply-struct/**/**.cpp",
+]
+SPDX-FileCopyrightText = "2022-2023 Martin Leitner-Ankerl <martin.ankerl@gmail.com>"
+SPDX-License-Identifier = "MIT"

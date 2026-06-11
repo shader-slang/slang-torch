@@ -1,3 +1,8 @@
+<!--
+SPDX-FileCopyrightText: 2024-2026 The Khronos Group, Inc.
+SPDX-License-Identifier: CC-BY-4.0
+-->
+
 # Slang-Torch Package
 
 This package allows you to use Slang as a language to write
