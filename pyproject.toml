@@ -20,7 +20,8 @@ requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
 ]
 
 [project.urls]
@@ -31,3 +32,6 @@ classifiers = [
 ignore-vcs = true
 include = ["slangtorch/*.py", "slangtorch/bin/*", "slangtorch/util/*.py"]
 exclude = [".github/**", "tests/*.*", "build.bat", "build-package.sh", ".gitignore", "tmp/**"]
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "hatch_build.py"

@@ -1,33 +1,55 @@
-mkdir -p ./tmp
-mkdir -p ./tmp/win64
-mkdir -p ./tmp/linux64
-echo "extracting $WIN64ZIP"
-unzip -n $WIN64ZIP -d ./tmp/win64
-echo "extracting $LINUX64ZIP"
-unzip -n $LINUX64ZIP -d ./tmp/linux64
+set -euo pipefail
 
-mkdir -p ./slangtorch/bin/
-if [ -e "./tmp/win64/bin/slang-compiler.dll" ]; then
-    cp ./tmp/win64/bin/slang-compiler.dll ./slangtorch/bin/
+case "${PACKAGE_PLATFORM:-}" in
+    windows-x86_64)
+        PACKAGE_ZIP="$WIN64ZIP"
+        PACKAGE_TMP="./tmp/win64"
+        WHEEL_TAG="py3-none-win_amd64"
+        ;;
+    linux-x86_64)
+        PACKAGE_ZIP="$LINUX64ZIP"
+        PACKAGE_TMP="./tmp/linux64"
+        WHEEL_TAG="py3-none-manylinux_2_27_x86_64"
+        ;;
+    linux-aarch64)
+        PACKAGE_ZIP="$LINUXAARCH64ZIP"
+        PACKAGE_TMP="./tmp/linux-aarch64"
+        WHEEL_TAG="py3-none-manylinux_2_28_aarch64"
+        ;;
+    *)
+        echo "Error: PACKAGE_PLATFORM must be one of: windows-x86_64, linux-x86_64, linux-aarch64"
+        exit 1
+        ;;
+esac
+
+rm -rf ./tmp ./slangtorch/bin
+mkdir -p "$PACKAGE_TMP" ./slangtorch/bin/
+echo "extracting $PACKAGE_ZIP"
+unzip -n "$PACKAGE_ZIP" -d "$PACKAGE_TMP"
+
+if [ "$PACKAGE_PLATFORM" = "windows-x86_64" ]; then
+    if [ -e "$PACKAGE_TMP/bin/slang-compiler.dll" ]; then
+        cp "$PACKAGE_TMP/bin/slang-compiler.dll" ./slangtorch/bin/
+    else
+        cp "$PACKAGE_TMP/bin/slang.dll" ./slangtorch/bin/
+    fi
+    cp "$PACKAGE_TMP/bin/slang-glsl-module.dll" ./slangtorch/bin/
+    cp "$PACKAGE_TMP/bin/slangc.exe" ./slangtorch/bin/
 else
-    cp ./tmp/win64/bin/slang.dll ./slangtorch/bin/
+    if [ -e "$PACKAGE_TMP/lib/libslang-compiler.so" ]; then
+        cp "$(realpath "$PACKAGE_TMP/lib/libslang-compiler.so")" ./slangtorch/bin/
+    else
+        cp "$PACKAGE_TMP/lib/libslang.so" ./slangtorch/bin/
+    fi
+    cp "$PACKAGE_TMP"/lib/libslang-glsl-module*.so ./slangtorch/bin/
+    cp "$PACKAGE_TMP/bin/slangc" ./slangtorch/bin/slangc
+    chmod +x ./slangtorch/bin/slangc
 fi
-cp ./tmp/win64/bin/slang-glsl-module.dll ./slangtorch/bin/
-cp ./tmp/win64/bin/slangc.exe ./slangtorch/bin/
-if [ -e "./tmp/linux64/lib/libslang-compiler.so" ]; then
-    cp `realpath ./tmp/linux64/lib/libslang-compiler.so` ./slangtorch/bin/
-else
-    cp ./tmp/linux64/lib/libslang.so ./slangtorch/bin/
-fi
-cp ./tmp/linux64/lib/libslang-glsl-module*.so ./slangtorch/bin/
-cp ./tmp/linux64/bin/slangc ./slangtorch/bin/slangc
-chmod +x ./slangtorch/bin/slangc
 
 echo "content of ./slangtorch/bin/:"
 ls ./slangtorch/bin/
 
-rm $WIN64ZIP
-rm $LINUX64ZIP
+rm "$PACKAGE_ZIP"
 rm -rf ./tmp/
 
 # Detect Python command - check if python has pip module
@@ -55,4 +77,4 @@ $PYTHON_CMD --version
 $PYTHON_CMD -m pip install --upgrade pip
 $PYTHON_CMD -m pip install build hatchling
 
-$PYTHON_CMD -m build
+SLANGTORCH_WHEEL_TAG="$WHEEL_TAG" $PYTHON_CMD -m build --wheel
