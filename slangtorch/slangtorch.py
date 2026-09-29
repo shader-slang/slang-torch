@@ -628,15 +628,10 @@ def _compileAndLoadModule(metadata, sources, moduleName, buildDir, slangSourceDi
 
     extra_cflags = []
     extra_cuda_cflags = []
-    # If windows, add /std:c++17 to extra_cflags
-    if sys.platform == "win32":
-        extra_cflags = ["/std:c++17"]
-        extra_cuda_cflags = ["--std=c++17"]
-
-    # If linux/darwin, add -std=c++17 to extra_cflags
-    if sys.platform == "linux" or sys.platform == "darwin":
-        extra_cflags = ["-std=c++17"]
-        extra_cuda_cflags = ["-std=c++17"]
+    # Let PyTorch select the C++ standard required by its extension headers.
+    # Adding another standard flag here can override PyTorch's selection; for
+    # example, PyTorch 2.13 requires C++20 but SlangTorch previously forced
+    # C++17, causing extension compilation to fail.
 
     if extraCudaFlags:
         extra_cuda_cflags.extend(extraCudaFlags)
